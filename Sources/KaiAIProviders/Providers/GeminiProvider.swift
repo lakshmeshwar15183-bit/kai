@@ -31,12 +31,12 @@ public struct GeminiProvider: AIProvider {
 
         let contents = request.messages
             .filter { $0.role != .system }
-            .map { Content(role: $0.role == .assistant ? "model" : "user", parts: [Part(text: $0.content)]) }
+            .map { RequestContent(role: $0.role == .assistant ? "model" : "user", parts: [RequestPart(text: $0.content)]) }
         let systemText = request.messages.filter { $0.role == .system }.map(\.content).joined(separator: "\n")
 
         let body = RequestBody(
             contents: contents,
-            systemInstruction: systemText.isEmpty ? nil : Content(role: "user", parts: [Part(text: systemText)]),
+            systemInstruction: systemText.isEmpty ? nil : RequestContent(role: "user", parts: [RequestPart(text: systemText)]),
             generationConfig: GenerationConfig(
                 temperature: request.options.temperature,
                 maxOutputTokens: request.options.maxTokens
@@ -54,29 +54,41 @@ public struct GeminiProvider: AIProvider {
             body: body,
             decode: ResponseBody.self
         )
-        let content = response.candidates.first?.content.parts.compactMap { $0.text }.joined() ?? ""
-        guard !content.isEmpty else {
+
+        // Current Gemini responses (gemini-1.5/2.x/3.x) may omit `role` on the
+        // candidate content, and occasionally `parts`/`candidates`. Decode
+        // leniently and take the first candidate that yields text.
+        let text = response.candidates?
+            .compactMap { $0.content?.parts?.compactMap(\.text).joined() }
+            .first(where: { !$0.isEmpty }) ?? ""
+        guard !text.isEmpty else {
             throw AIProviderError.decodingFailed(reason: "no candidate text in response")
         }
-        return AIResponse(content: content, usage: AIUsage(
+        return AIResponse(content: text, usage: AIUsage(
             promptTokens: response.usageMetadata?.promptTokenCount ?? 0,
             completionTokens: response.usageMetadata?.candidatesTokenCount ?? 0
         ))
     }
 
     // MARK: Wire format
-    private struct Part: Codable { let text: String }
-    private struct Content: Codable { let role: String; let parts: [Part] }
+
+    // Request (strict: Kai always supplies role + parts).
+    private struct RequestPart: Encodable { let text: String }
+    private struct RequestContent: Encodable { let role: String; let parts: [RequestPart] }
     private struct GenerationConfig: Encodable { let temperature: Double; let maxOutputTokens: Int? }
     private struct RequestBody: Encodable {
-        let contents: [Content]
-        let systemInstruction: Content?
+        let contents: [RequestContent]
+        let systemInstruction: RequestContent?
         let generationConfig: GenerationConfig
     }
+
+    // Response (lenient: `role`, `parts`, and `candidates` may be absent).
+    private struct ResponsePart: Decodable { let text: String? }
+    private struct ResponseContent: Decodable { let parts: [ResponsePart]?; let role: String? }
+    private struct ResponseCandidate: Decodable { let content: ResponseContent? }
+    private struct UsageMetadata: Decodable { let promptTokenCount: Int?; let candidatesTokenCount: Int? }
     private struct ResponseBody: Decodable {
-        struct Candidate: Decodable { let content: Content }
-        struct UsageMetadata: Decodable { let promptTokenCount: Int?; let candidatesTokenCount: Int? }
-        let candidates: [Candidate]
+        let candidates: [ResponseCandidate]?
         let usageMetadata: UsageMetadata?
     }
 }

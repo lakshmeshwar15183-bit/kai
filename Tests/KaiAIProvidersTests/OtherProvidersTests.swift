@@ -43,6 +43,21 @@ final class GeminiProviderTests: XCTestCase {
         XCTAssertTrue(urlString.contains("models/gemini-1.5:generateContent"))
         XCTAssertTrue(urlString.contains("key=gkey"))
     }
+
+    func testParsesResponseWithoutRoleField() async throws {
+        // Current Gemini (2.x/3.x) omits `role` on candidate content. The decoder
+        // must tolerate its absence rather than throwing keyNotFound('role').
+        let json = """
+        {"candidates":[{"content":{"parts":[{"text":"Hi from Gemini"}]}}],
+         "usageMetadata":{"promptTokenCount":2,"candidatesTokenCount":4}}
+        """
+        let transport = MockTransport(json: json)
+        let provider = GeminiProvider(model: "gemini-2.5-flash", apiKeyReference: "GEMINI_API_KEY",
+                                      transport: transport, resolver: StaticSecretResolver(["GEMINI_API_KEY": "gkey"]))
+        let response = try await provider.complete(AIRequest(messages: [.user("hello")]))
+        XCTAssertEqual(response.content, "Hi from Gemini")
+        XCTAssertEqual(response.usage.totalTokens, 6)
+    }
 }
 
 final class OllamaProviderTests: XCTestCase {
