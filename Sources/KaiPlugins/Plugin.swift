@@ -60,6 +60,11 @@ public struct PluginServices: Sendable {
 public protocol Plugin: Sendable {
     var manifest: PluginManifest { get }
 
+    /// Bundle identifiers of the applications this plugin specialises in. When a
+    /// command arrives while one of these apps is frontmost, the router prefers
+    /// this plugin. `nil` means the plugin is application-agnostic.
+    var supportedApplications: Set<String>? { get }
+
     /// Whether this plugin wants to handle the given command.
     func canHandle(_ command: KaiCommand) -> Bool
 
@@ -72,6 +77,8 @@ public protocol Plugin: Sendable {
 }
 
 public extension Plugin {
+    var supportedApplications: Set<String>? { nil }
+
     func capability(for command: KaiCommand) -> Capability? {
         manifest.capabilities.first
     }

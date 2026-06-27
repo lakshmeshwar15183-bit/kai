@@ -19,6 +19,8 @@ public struct KaiEvent: Sendable, Equatable, Identifiable {
         case stateChanged(from: ActivationState, to: ActivationState)
         /// Kai woke up due to a trigger.
         case activated(trigger: ActivationTrigger)
+        /// The interaction mode changed (Observe <-> Execute).
+        case modeChanged(InteractionMode)
         /// The user requested a halt.
         case stopRequested(StopCommand)
         /// A guarded action is awaiting user decision.

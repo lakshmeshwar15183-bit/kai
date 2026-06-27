@@ -18,19 +18,25 @@ public struct CommandRouter: Sendable {
     private let prompter: any PermissionPrompting
     private let services: PluginServices
     private let eventBus: EventBus
+    private let modeController: ModeController?
+    private let activeApplicationProvider: (any ActiveApplicationProvider)?
 
     public init(
         registry: PluginRegistry,
         permissionEngine: PermissionEngine,
         prompter: any PermissionPrompting,
         services: PluginServices,
-        eventBus: EventBus
+        eventBus: EventBus,
+        modeController: ModeController? = nil,
+        activeApplicationProvider: (any ActiveApplicationProvider)? = nil
     ) {
         self.registry = registry
         self.permissionEngine = permissionEngine
         self.prompter = prompter
         self.services = services
         self.eventBus = eventBus
+        self.modeController = modeController
+        self.activeApplicationProvider = activeApplicationProvider
     }
 
     public func route(_ command: KaiCommand) async throws -> CommandResult {
@@ -41,16 +47,31 @@ public struct CommandRouter: Sendable {
             return CommandResult(message: "Halted (\(stop.rawValue)).", didSucceed: true)
         }
 
-        // 2. Respect a stop that is already pending.
+        // 2. Mode-switch words ("Observe" / "Execute") toggle interaction mode.
+        if let mode = InteractionMode(modeUtterance: command.text), let modeController {
+            await modeController.setMode(mode)
+            return CommandResult(message: "\(mode.displayName) mode.", didSucceed: true)
+        }
+
+        // 3. Respect a stop that is already pending.
         try await services.stopController.checkpoint()
 
-        // 3. Resolve a handler.
-        guard let plugin = await registry.handler(for: command) else {
+        // 4. Resolve the active application (Active Window Intelligence).
+        let appContext = await resolveActiveApplication(command)
+
+        // 5. Resolve a handler, preferring one that specialises in the active app.
+        guard let plugin = await registry.handler(for: command, in: appContext) else {
             throw KaiError.noHandler(command: command.text)
         }
 
-        // 4. Permission gate.
-        let declared = plugin.capability(for: command)?.defaultPermissionLevel ?? .green
+        // 6. Observe mode is read-only: block any side-effecting capability.
+        let capability = plugin.capability(for: command)
+        if let modeController, await modeController.isObserving, capability?.sideEffect ?? true {
+            throw KaiError.blockedInObserveMode(action: command.text)
+        }
+
+        // 7. Permission gate.
+        let declared = capability?.defaultPermissionLevel ?? .green
         let level = permissionEngine.effectiveLevel(forAction: command.text, declared: declared)
         if PermissionDecision(level: level) != .allowed {
             await eventBus.publish(KaiEvent(kind: .permissionRequested(action: command.text, level: level)))
@@ -67,7 +88,17 @@ public struct CommandRouter: Sendable {
             throw KaiError.permissionDenied(action: command.text, level: level)
         }
 
-        // 5. Execute.
+        // 8. Execute.
         return try await plugin.handle(command, services: services)
+    }
+
+    private func resolveActiveApplication(_ command: KaiCommand) async -> ApplicationContext? {
+        if let provider = activeApplicationProvider {
+            return await provider.current()
+        }
+        if let bundle = command.activeApplication {
+            return ApplicationContext(bundleIdentifier: bundle, localizedName: bundle)
+        }
+        return nil
     }
 }

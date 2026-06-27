@@ -4,6 +4,7 @@ import KaiAI
 import KaiMemory
 import KaiAutomation
 import KaiPlugins
+import KaiBrowser
 
 // A non-interactive demonstration that wires the platform-agnostic core
 // together and exercises it on any platform (including Linux/CI). It is NOT the
@@ -24,6 +25,8 @@ func printEvent(_ event: KaiEvent) {
         print("  · state: \(from.displayName) -> \(to.displayName)")
     case let .activated(trigger):
         print("  · activated via \(trigger.rawValue)")
+    case let .modeChanged(mode):
+        print("  · mode -> \(mode.displayName)")
     case let .stopRequested(command):
         print("  · STOP requested (\(command.rawValue))")
     case let .permissionRequested(action, level):
@@ -44,8 +47,28 @@ let stopController = StopController()
 let logger = KaiLogger(minimumLevel: .info)
 let stateMachine = ActivationStateMachine(eventBus: eventBus, stopController: stopController)
 let permissionEngine = PermissionEngine()
+let modeController = ModeController(mode: .execute, eventBus: eventBus)
+let appProvider = StubActiveApplicationProvider()
+
+// A scripted browser: a webmail login page that "resolves" after the user
+// signs in, leading to an inbox with a Compose button.
+let loginPage = PageSnapshot(
+    url: URL(string: "https://mail.example.com/login")!,
+    title: "Sign in to ExampleMail",
+    text: "Please sign in to continue.",
+    elements: [PageElement(id: "pw", role: .secureField, label: "Password")]
+)
+let inboxPage = PageSnapshot(
+    url: URL(string: "https://mail.example.com/inbox")!,
+    title: "ExampleMail — Inbox",
+    text: "You have 3 unread messages about your study schedule.",
+    elements: [PageElement(id: "compose", role: .button, label: "Compose")]
+)
+let browser = InMemoryBrowserController(kind: .safari, pages: [loginPage, inboxPage])
 
 let registry = PluginRegistry()
+// Specific skills first, conversation last (it is the catch-all fallback).
+await registry.register(BrowserPlugin(controller: browser, pollInterval: .milliseconds(20)))
 await registry.register(ConversationPlugin())
 
 let services = PluginServices(
@@ -61,7 +84,9 @@ let router = CommandRouter(
     permissionEngine: permissionEngine,
     prompter: DemoPrompter(),
     services: services,
-    eventBus: eventBus
+    eventBus: eventBus,
+    modeController: modeController,
+    activeApplicationProvider: appProvider
 )
 
 // Stream events to the console.
@@ -72,14 +97,6 @@ let printer = Task {
     }
 }
 
-// MARK: - Drive a short scenario
-
-print("Kai core demo\n=============")
-
-print("\n[1] Wake up (typed command):")
-try await stateMachine.activate(trigger: .typedCommand)
-try await stateMachine.transition(to: .thinking)
-
 func run(_ text: String) async {
     print("\n> \(text)")
     do {
@@ -89,6 +106,14 @@ func run(_ text: String) async {
         print("  ! \(error)")
     }
 }
+
+// MARK: - Drive the scenario
+
+print("Kai core demo\n=============")
+
+print("\n[1] Wake up (typed command):")
+try await stateMachine.activate(trigger: .typedCommand)
+try await stateMachine.transition(to: .thinking)
 
 await run("What is the capital of France?")   // Green: runs
 await run("Delete the old screenshots")        // Yellow: prompter approves
@@ -106,10 +131,28 @@ let workflow = Workflow(name: "demo", steps: [
 let outcome = await engine.run(workflow, context: context)
 print("  workflow outcome: \(outcome)")
 
-print("\n[3] Say a stop word:")
+print("\n[3] Browser automation (Safari is frontmost):")
+await appProvider.set(ApplicationContext(
+    bundleIdentifier: KnownApplication.safari,
+    localizedName: "Safari",
+    windowTitle: "ExampleMail"
+))
+await browser.scheduleLoginResolution(after: 2, to: inboxPage)
+await run("open https://mail.example.com/login") // detects login, pauses
+await run("continue after login")                 // waits for auth, resumes
+await run("summarize this page")                   // read-only, uses AI
+
+print("\n[4] Observe mode (read-only):")
+await run("observe")
+await run("read the page")    // read-only: allowed
+await run("click Compose")    // side effect: blocked in Observe
+await run("execute")
+await run("click Compose")    // now allowed (Yellow, prompter approves)
+
+print("\n[5] Say a stop word:")
 await run("stop")
 
-print("\n[4] Return to sleep:")
+print("\n[6] Return to sleep:")
 await stateMachine.stop()
 try? await stateMachine.sleep()
 let finalState = await stateMachine.state

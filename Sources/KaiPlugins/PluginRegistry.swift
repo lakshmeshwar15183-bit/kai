@@ -37,4 +37,18 @@ public actor PluginRegistry {
     public func handler(for command: KaiCommand) -> (any Plugin)? {
         all().first { $0.canHandle(command) }
     }
+
+    /// Resolves a handler with Active Window Intelligence: among the plugins
+    /// that can handle the command, one that specialises in the frontmost
+    /// application wins; otherwise the first capable plugin (in registration
+    /// order) is used.
+    public func handler(for command: KaiCommand, in application: ApplicationContext?) -> (any Plugin)? {
+        let capable = all().filter { $0.canHandle(command) }
+        if let bundleID = application?.bundleIdentifier {
+            if let appSpecific = capable.first(where: { $0.supportedApplications?.contains(bundleID) == true }) {
+                return appSpecific
+            }
+        }
+        return capable.first
+    }
 }

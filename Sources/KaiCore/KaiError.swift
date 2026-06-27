@@ -9,6 +9,8 @@ public enum KaiError: Error, Sendable, Equatable, CustomStringConvertible {
     case interrupted
     /// A guarded action was denied by the permission engine or the user.
     case permissionDenied(action: String, level: PermissionLevel)
+    /// A side-effecting action was attempted while in Observe (read-only) mode.
+    case blockedInObserveMode(action: String)
     /// An attempt was made to persist data that the privacy layer forbids.
     case sensitiveDataRejected(reason: String)
     /// No registered plugin could handle the command.
@@ -26,6 +28,8 @@ public enum KaiError: Error, Sendable, Equatable, CustomStringConvertible {
             return "Operation interrupted by the user."
         case let .permissionDenied(action, level):
             return "Permission denied for \(level.displayName) action: \(action)."
+        case let .blockedInObserveMode(action):
+            return "Blocked in Observe mode (read-only): \(action). Say \"Execute\" to allow actions."
         case let .sensitiveDataRejected(reason):
             return "Sensitive data rejected: \(reason)."
         case let .noHandler(command):

@@ -9,12 +9,25 @@ public struct Capability: Sendable, Codable, Equatable, Identifiable {
     public var name: String
     public var summary: String
     public var defaultPermissionLevel: PermissionLevel
+    /// Whether invoking this capability changes state in the world (clicks,
+    /// typing, file/email/network mutations). Read-only capabilities
+    /// (summarize, extract, answer) set this to `false` and remain available in
+    /// Observe mode. Defaults to `true` so an undeclared capability is treated
+    /// as mutating — fail safe.
+    public var sideEffect: Bool
 
-    public init(id: String, name: String, summary: String, defaultPermissionLevel: PermissionLevel) {
+    public init(
+        id: String,
+        name: String,
+        summary: String,
+        defaultPermissionLevel: PermissionLevel,
+        sideEffect: Bool = true
+    ) {
         self.id = id
         self.name = name
         self.summary = summary
         self.defaultPermissionLevel = defaultPermissionLevel
+        self.sideEffect = sideEffect
     }
 }
 

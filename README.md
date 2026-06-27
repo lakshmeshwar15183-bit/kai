@@ -5,13 +5,14 @@ natural-language instructions and safely performs tasks on your Mac. Kai is not
 a chatbot: it is a modular operating layer that observes, plans, and acts —
 always under your control.
 
-> **Status — Milestone 1 (Architecture & Foundations).**
-> This milestone delivers the modular architecture: the activation lifecycle,
-> the three-tier permission model, the plugin framework, the provider-agnostic
-> AI seam, privacy-first memory, an interruptible automation engine, and a
-> macOS SwiftUI scaffold. The platform-agnostic core **builds and is unit-tested
-> on Linux/CI**; the macOS UI and OS-specific skills are scaffolded and land in
-> later milestones.
+> **Status — Milestone 2 (Observe/Execute · Active Window Intelligence · Browser).**
+> Milestone 1 delivered the modular architecture (activation lifecycle, the
+> three-tier permission model, plugin framework, provider-agnostic AI seam,
+> privacy-first memory, interruptible automation, macOS UI scaffold). Milestone 2
+> adds **Observe/Execute mode**, **Active Window Intelligence**, and the first
+> **skill module — browser automation**. The platform-agnostic core **builds and
+> is unit-tested on Linux/CI** (62 tests); the macOS UI and OS-specific drivers
+> are scaffolded behind `#if os(macOS)` and land fully in later milestones.
 
 ## Core principles
 
@@ -23,16 +24,18 @@ explicit activation. Saying **Stop / Pause / Cancel / Abort** halts everything.
 
 ```
 Sources/
-  KaiCore/        Activation state machine, permission engine, stop controller,
-                  event bus, logger, sensitive-data redactor  (platform-agnostic)
+  KaiCore/        Activation + Observe/Execute mode, permission engine, stop
+                  controller, event bus, logger, redactor, active-app model
   KaiAI/          Provider-agnostic AI abstraction + registry + echo provider
   KaiMemory/      Privacy-first preference stores (in-memory + JSON file)
   KaiAutomation/  Interruptible multi-step workflow engine
   KaiPlugins/     Plugin protocol, registry, command router, reference plugin
+  KaiBrowser/     Skill module: browser automation plugin (Safari/Chrome/Edge)
   KaiApp/         macOS SwiftUI app  (compiled only on macOS via #if os(macOS))
   kai-cli/        Linux/CI-runnable demo that wires the core together
 Tests/            XCTest suites for every platform-agnostic module
 docs/ARCHITECTURE.md   Design, dependency direction, and trade-offs
+PROJECT_STATUS.md · ROADMAP.md · CHANGELOG.md   Project governance
 ```
 
 ## Build, test, run
@@ -64,15 +67,19 @@ See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the full design.
 
 ## Roadmap
 
-| Milestone | Theme |
-|-----------|-------|
-| **1 (this)** | Architecture, plugin framework, permissions, AI seam, memory, automation, UI scaffold |
-| 2 | Voice, memory persistence UX, permission dialogs |
-| 3 | Browser automation skill |
-| 4 | Screen understanding (Observe / Execute) |
-| 5 | Finder automation |
-| 6 | Office automation |
-| 7 | Study assistant |
-| 8 | Workflow automation |
-| 9 | Performance optimization |
-| 10 | Production release |
+| Milestone | Theme | Status |
+|-----------|-------|--------|
+| 1 | Architecture, plugin framework, permissions, AI seam, memory, automation, UI scaffold | ✅ Done |
+| 2 | Observe/Execute mode, Active Window Intelligence, browser automation | ✅ Done |
+| 3 | Native macOS shell & Accessibility permissions | ⏳ Next |
+| 4 | Screen understanding (Observe deepened) | Planned |
+| 5 | Finder automation | Planned |
+| 6 | Voice system | Planned |
+| 7 | Office automation | Planned |
+| 8 | Gmail automation | Planned |
+| 9 | Study assistant | Planned |
+| 10 | Autonomous workflow engine | Planned |
+| 11 | Performance optimization | Planned |
+| 12 | Production release | Planned |
+
+See [`ROADMAP.md`](ROADMAP.md) and [`PROJECT_STATUS.md`](PROJECT_STATUS.md) for detail.

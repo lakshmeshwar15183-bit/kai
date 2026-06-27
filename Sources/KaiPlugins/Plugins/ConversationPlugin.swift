@@ -20,7 +20,8 @@ public struct ConversationPlugin: Plugin {
                 id: "core.conversation.chat",
                 name: "Chat",
                 summary: "Respond to a natural-language message.",
-                defaultPermissionLevel: .green
+                defaultPermissionLevel: .green,
+                sideEffect: false
             )
         ]
     )

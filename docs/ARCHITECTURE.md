@@ -1,7 +1,8 @@
 # Kai Architecture
 
-This document explains the design of Kai's foundation (Milestone 1), the
-reasoning behind each decision, and the trade-offs accepted.
+This document explains the design of Kai's foundation, the reasoning behind each
+decision, and the trade-offs accepted. It is kept current as milestones land
+(latest: Milestone 2 — Observe/Execute, Active Window Intelligence, Browser).
 
 ## 1. Goals that shape the architecture
 
@@ -30,18 +31,25 @@ downward dependency graph (no cycles):
           KaiAI        KaiMemory      KaiAutomation
             └──────────────┼──────────────┘
                        KaiPlugins
+                           │
+                       KaiBrowser  (skill module)
             ┌──────────────┴──────────────┐
          KaiApp (macOS only)            kai-cli (any platform)
 ```
 
 - **KaiCore** has no dependencies. It owns the domain primitives every other
-  module relies on: the activation state machine, the permission engine, the
-  stop controller, the event bus, the logger, and the sensitive-data redactor.
+  module relies on: the activation state machine, the **interaction mode
+  controller (Observe/Execute)**, the permission engine, the stop controller,
+  the event bus, the logger, the sensitive-data redactor, and the **active
+  application abstraction**.
 - **KaiAI / KaiMemory / KaiAutomation** are independent siblings that depend
   only on KaiCore. They never depend on each other, which keeps them swappable
   and independently testable.
 - **KaiPlugins** sits on top and composes the lower layers into the plugin
   contract and command router — the single extensibility seam.
+- **KaiBrowser** is the first *skill module*: a self-contained capability built
+  on KaiPlugins. Future skills (Finder, Office, Gmail, Study) follow this exact
+  shape — a new module depending on KaiPlugins, never modifying the core.
 - **KaiApp** (SwiftUI) and **kai-cli** (demo/CI) are leaf "drivers" that wire the
   pieces together. Nothing depends on them.
 
@@ -134,9 +142,35 @@ intercepts stop words, honours pending stops, finds a handler, enforces the
 permission gate (emitting permission events), then executes with injected
 `PluginServices`. New capabilities are added purely by registering a plugin.
 
+### Observe/Execute mode (`ModeController`)
+Kai operates in `.execute` by default. Saying "Observe" switches to a read-only
+mode in which the router refuses any capability whose `sideEffect` is `true`
+(clicks, typing, file/email/network mutations), while read-only capabilities
+(read, summarize, answer) still run. "Execute" returns to normal operation.
+This is the foundation for screen understanding: Kai can analyse everything
+visible without touching anything until explicitly told to act.
+
+### Active Window Intelligence (`ApplicationContext` / `ActiveApplicationProvider`)
+The router asks an `ActiveApplicationProvider` for the frontmost application and
+prefers the plugin that declares it in `supportedApplications`. On macOS the
+provider is backed by `NSWorkspace`; tests and the CLI use a stub. This lets the
+same command ("read the page", "click Submit") resolve to the right skill based
+on what the user is actually looking at.
+
+### Browser skill (`KaiBrowser`)
+The first skill module, and the template for all future skills. A
+`BrowserController` protocol abstracts the driver (Safari/Chrome/Edge via
+AppleScript + injected JavaScript on macOS; an in-memory fake for tests). The
+platform-agnostic pieces — `BrowserCommandParser` (text → `BrowserIntent`),
+`LoginDetector`, and `BrowserPlugin` — are fully unit-tested. Safety properties:
+read/summarize are read-only (available in Observe); click/fill are Yellow;
+anything mentioning passwords/OTP escalates to Red; on a detected login page the
+plugin pauses and asks the user to authenticate and **never types credentials or
+fills secure fields**.
+
 ## 6. Testing
 
-Every platform-agnostic module has an XCTest suite (33 tests at this milestone)
+Every platform-agnostic module has an XCTest suite (62 tests as of Milestone 2)
 covering permission inference/escalation, stop/interruption, state transitions,
 redaction, the event bus, provider registry, memory rejection of secrets,
 workflow completion/interruption/failure, and end-to-end command routing
@@ -145,6 +179,7 @@ including denial of Red actions. `swift test` runs them on Linux/CI.
 ## 7. What is intentionally deferred
 
 Real provider clients (OpenAI/Anthropic/Gemini/local), voice, screen
-understanding, and the concrete macOS skills (Browser, Finder, Gmail, Office,
-Study) are later milestones. They slot into the existing seams — `AIProviderFactory`
-for vendors and `Plugin` for skills — without changing the core.
+understanding, and the remaining macOS skills (Finder, Gmail, Office, Study) are
+later milestones. They slot into the existing seams — `AIProviderFactory` for
+vendors and `Plugin`/skill-module for capabilities (as `KaiBrowser` already
+demonstrates) — without changing the core.
