@@ -37,6 +37,7 @@ public struct KaiAppEntry: App {
         Settings {
             SettingsView()
                 .environmentObject(model)
+                .frame(minWidth: 520, minHeight: 440)
         }
     }
 }
@@ -52,6 +53,7 @@ struct ContentView: View {
         case plugins = "Plugins"
         case activity = "Activity"
         case permissions = "Permissions"
+        case settings = "Settings"
         var id: String { rawValue }
 
         var icon: String {
@@ -60,6 +62,7 @@ struct ContentView: View {
             case .plugins: return "puzzlepiece.extension"
             case .activity: return "list.bullet.rectangle"
             case .permissions: return "lock.shield"
+            case .settings: return "gearshape"
             }
         }
     }
@@ -80,6 +83,7 @@ struct ContentView: View {
             case .plugins: PluginManagerView()
             case .activity: ActivityLogView()
             case .permissions: PermissionManagerView()
+            case .settings: SettingsView()
             }
         }
         .sheet(item: $model.pendingApproval) { approval in

@@ -245,7 +245,6 @@ struct SettingsView: View {
             .formStyle(.grouped)
             .tabItem { Label("Updates", systemImage: "arrow.down.circle") }
         }
-        .frame(width: 520, height: 440)
         .padding()
     }
 }
