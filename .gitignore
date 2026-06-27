@@ -6,6 +6,9 @@ Package.resolved
 # Xcode
 *.xcodeproj/
 *.xcworkspace/
+# ...but the bundled app workspace IS part of the repo:
+!Kai.xcworkspace/
+!Kai.xcworkspace/**
 xcuserdata/
 DerivedData/
 *.xcuserstate
