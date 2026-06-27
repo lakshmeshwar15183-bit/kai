@@ -1,10 +1,26 @@
 #if os(macOS)
 import SwiftUI
+import AppKit
 import KaiCore
+
+/// Ensures the SwiftPM-built binary behaves as a regular, foreground GUI app
+/// (shows in the Dock, brings its window forward on launch). This matters when
+/// the app is launched as a bundle that was assembled outside Xcode.
+final class KaiAppDelegate: NSObject, NSApplicationDelegate {
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        NSApp.setActivationPolicy(.regular)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        true
+    }
+}
 
 /// The SwiftUI application entry point. Launched on macOS by `kai-app`'s
 /// `KaiAppEntry.main()`.
 public struct KaiAppEntry: App {
+    @NSApplicationDelegateAdaptor(KaiAppDelegate.self) private var delegate
     @StateObject private var model = AppModel()
 
     public init() {}

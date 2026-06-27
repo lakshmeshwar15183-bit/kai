@@ -4,6 +4,7 @@ import AppKit
 import AVFoundation
 import Speech
 import CoreGraphics
+import ApplicationServices
 
 /// The macOS system permissions Kai needs for its various skills. Kai requests
 /// these explicitly during onboarding and surfaces their status in the
@@ -71,9 +72,11 @@ public struct SystemPermissionService: Sendable {
     public func request(_ permission: SystemPermission) async -> PermissionAuthorization {
         switch permission {
         case .accessibility:
-            // Triggers the system prompt to add Kai to Accessibility.
-            let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true]
-            _ = AXIsProcessTrustedWithOptions(options as CFDictionary)
+            // Triggers the system prompt to add Kai to Accessibility. The option
+            // key is referenced by its documented string value to avoid SDK
+            // symbol-import differences across toolchains.
+            let options = ["AXTrustedCheckOptionPrompt": true] as CFDictionary
+            _ = AXIsProcessTrustedWithOptions(options)
             return status(of: .accessibility)
         case .screenRecording:
             _ = CGRequestScreenCaptureAccess()

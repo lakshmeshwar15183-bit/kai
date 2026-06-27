@@ -51,7 +51,7 @@ public final class AppModel: ObservableObject {
         }
         // Approval requests → sheet.
         Task { @MainActor in
-            for await pending in await assembly.prompter.pending {
+            for await pending in assembly.prompter.pending {
                 self.pendingApproval = pending
             }
         }

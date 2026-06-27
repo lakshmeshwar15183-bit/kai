@@ -3,6 +3,19 @@ import Foundation
 import Speech
 import AVFoundation
 
+/// Guards a continuation so it is resumed at most once, even if the speech
+/// callback fires multiple times on an arbitrary queue (Swift 6 concurrency-safe).
+private final class ResumeOnce: @unchecked Sendable {
+    private let lock = NSLock()
+    private var done = false
+    func claim() -> Bool {
+        lock.lock(); defer { lock.unlock() }
+        if done { return false }
+        done = true
+        return true
+    }
+}
+
 /// macOS speech recognition via the Speech framework and `AVAudioEngine`.
 /// Captures one utterance per call, stopping at the first final result.
 ///
@@ -35,16 +48,16 @@ public final class AppleSpeechRecognizer: SpeechRecognizer, @unchecked Sendable 
             inputNode.removeTap(onBus: 0)
         }
 
+        let once = ResumeOnce()
         return try await withCheckedThrowingContinuation { continuation in
-            var resumed = false
             recognizer.recognitionTask(with: request) { result, error in
-                if let error, !resumed {
-                    resumed = true
-                    continuation.resume(throwing: VoiceError.recognitionFailed(reason: error.localizedDescription))
+                if let error {
+                    if once.claim() {
+                        continuation.resume(throwing: VoiceError.recognitionFailed(reason: error.localizedDescription))
+                    }
                     return
                 }
-                if let result, result.isFinal, !resumed {
-                    resumed = true
+                if let result, result.isFinal, once.claim() {
                     continuation.resume(returning: result.bestTranscription.formattedString)
                 }
             }
