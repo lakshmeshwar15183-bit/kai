@@ -18,6 +18,7 @@ let package = Package(
     products: [
         .library(name: "KaiCore", targets: ["KaiCore"]),
         .library(name: "KaiAI", targets: ["KaiAI"]),
+        .library(name: "KaiAIProviders", targets: ["KaiAIProviders"]),
         .library(name: "KaiMemory", targets: ["KaiMemory"]),
         .library(name: "KaiAutomation", targets: ["KaiAutomation"]),
         .library(name: "KaiPlugins", targets: ["KaiPlugins"]),
@@ -33,6 +34,10 @@ let package = Package(
         .target(
             name: "KaiAI",
             dependencies: ["KaiCore"]
+        ),
+        .target(
+            name: "KaiAIProviders",
+            dependencies: ["KaiAI"]
         ),
         .target(
             name: "KaiMemory",
@@ -56,18 +61,19 @@ let package = Package(
         // MARK: macOS-only surface (guarded internally with #if os(macOS))
         .target(
             name: "KaiApp",
-            dependencies: ["KaiCore", "KaiAI", "KaiMemory", "KaiAutomation", "KaiPlugins", "KaiBrowser"]
+            dependencies: ["KaiCore", "KaiAI", "KaiAIProviders", "KaiMemory", "KaiAutomation", "KaiPlugins", "KaiBrowser"]
         ),
 
         // MARK: Linux-runnable demo that wires the core together
         .executableTarget(
             name: "kai-cli",
-            dependencies: ["KaiCore", "KaiAI", "KaiMemory", "KaiAutomation", "KaiPlugins", "KaiBrowser"]
+            dependencies: ["KaiCore", "KaiAI", "KaiAIProviders", "KaiMemory", "KaiAutomation", "KaiPlugins", "KaiBrowser"]
         ),
 
         // MARK: Tests
         .testTarget(name: "KaiCoreTests", dependencies: ["KaiCore"]),
         .testTarget(name: "KaiAITests", dependencies: ["KaiAI"]),
+        .testTarget(name: "KaiAIProvidersTests", dependencies: ["KaiAIProviders", "KaiAI"]),
         .testTarget(name: "KaiMemoryTests", dependencies: ["KaiMemory"]),
         .testTarget(name: "KaiAutomationTests", dependencies: ["KaiAutomation", "KaiCore"]),
         .testTarget(name: "KaiPluginsTests", dependencies: ["KaiPlugins"]),
