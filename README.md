@@ -5,16 +5,17 @@ natural-language instructions and safely performs tasks on your Mac. Kai is not
 a chatbot: it is a modular operating layer that observes, plans, and acts —
 always under your control.
 
-> **Status — Milestone 3 (AI Provider Layer).**
-> Milestone 1 delivered the modular architecture; Milestone 2 added Observe/
-> Execute mode, Active Window Intelligence, and the first skill module (browser
-> automation). Milestone 3 adds **real, swappable AI providers** — OpenAI,
-> Anthropic, Gemini, and local Ollama — behind the existing provider seam, with
-> an HTTP-transport seam and a secret resolver so switching vendor is
-> configuration-only and API keys never touch config or logs. The
-> platform-agnostic core **builds and is unit-tested on Linux/CI** (74 tests);
-> the macOS UI and OS-specific code are scaffolded behind `#if os(macOS)` and
-> land fully in later milestones.
+> **Status — 0.4.0 (Final Delivery).** Kai is a modular Swift package plus a
+> native SwiftUI macOS app. Delivered: the activation lifecycle and three-tier
+> permission model, Observe/Execute mode, Active Window Intelligence, plugin
+> framework, provider-agnostic AI with **real OpenAI/Anthropic/Gemini/Ollama**
+> clients, privacy-first memory, an interruptible workflow engine with
+> retry/undo/dependencies, a redacted audit trail, and skills for **browser**,
+> **Finder** (real file ops + undo), **screen understanding/OCR/PDF**, and
+> **voice**. The cross-platform core builds and is unit-tested in CI
+> (**104 tests**); the SwiftUI shell + OS integrations are complete behind
+> `#if os(macOS)` and build into `Kai.app`/`Kai.dmg` on a Mac — see
+> [`docs/MACOS_STEPS.md`](docs/MACOS_STEPS.md).
 
 ## Core principles
 
@@ -32,14 +33,20 @@ Sources/
   KaiAIProviders/ Real providers: OpenAI, Anthropic, Gemini, Ollama (+ HTTP &
                   secret-resolver seams)
   KaiMemory/      Privacy-first preference stores (in-memory + JSON file)
-  KaiAutomation/  Interruptible multi-step workflow engine
+  KaiAutomation/  Interruptible workflow engine (+ pause/resume/retry/undo/deps)
   KaiPlugins/     Plugin protocol, registry, command router, reference plugin
-  KaiBrowser/     Skill module: browser automation plugin (Safari/Chrome/Edge)
-  KaiApp/         macOS SwiftUI app  (compiled only on macOS via #if os(macOS))
-  kai-cli/        Linux/CI-runnable demo that wires the core together
+  KaiBrowser/     Skill: browser automation (Safari/Chrome/Edge)
+  KaiFinder/      Skill: file organize/dedupe/search/rename/move/trash + undo
+  KaiVision/      Skill: screen understanding, OCR, PDF reading (read-only)
+  KaiVoice/       Skill: wake word, speech recognition/synthesis, session
+  KaiApp/         macOS SwiftUI app + composition root (#if os(macOS))
+  kai-cli/        Cross-platform demo that wires the core together
+  kai-app/        Launchable macOS app entry point
+App/              Info.plist, entitlements, AppIcon.svg, asset catalog
+Scripts/          build_app.sh, make_dmg.sh, generate_icon.sh
 Tests/            XCTest suites for every platform-agnostic module
-docs/ARCHITECTURE.md   Design, dependency direction, and trade-offs
-PROJECT_STATUS.md · ROADMAP.md · CHANGELOG.md   Project governance
+docs/             ARCHITECTURE.md, MACOS_STEPS.md
+PROJECT_STATUS.md · ROADMAP.md · CHANGELOG.md · INSTALL.md · RELEASE_NOTES.md
 ```
 
 ## Build, test, run
@@ -47,14 +54,22 @@ PROJECT_STATUS.md · ROADMAP.md · CHANGELOG.md   Project governance
 The core builds anywhere Swift 6 runs (macOS, Linux, CI):
 
 ```bash
-swift build        # compile all libraries + the CLI
-swift test         # run the full unit-test suite
-swift run kai-cli  # exercise the whole pipeline end-to-end
+swift build         # compile all libraries + executables
+swift test          # run the full unit-test suite (104 tests)
+swift run kai-cli   # exercise the whole pipeline end-to-end (offline)
+make                # list all developer shortcuts
 ```
 
-On a Mac, the `KaiApp` target provides the SwiftUI interface (status indicator,
-chat, plugin manager, activity log, approval sheets), embedded in an Xcode app
-that calls `KaiAppEntry.main()`.
+On a Mac (macOS 14+, Xcode 16 / Swift 6) you can build and run the app:
+
+```bash
+make run-app        # launch the SwiftUI app in development
+make app            # build dist/Kai.app
+make dmg            # build dist/Kai.dmg installer
+```
+
+See [`INSTALL.md`](INSTALL.md) and [`docs/MACOS_STEPS.md`](docs/MACOS_STEPS.md)
+for signing, notarization, and AI-provider key setup.
 
 ## Why this shape?
 
@@ -76,15 +91,7 @@ See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the full design.
 | 1 | Architecture, plugin framework, permissions, AI seam, memory, automation, UI scaffold | ✅ Done |
 | 2 | Observe/Execute mode, Active Window Intelligence, browser automation | ✅ Done |
 | 3 | AI Provider layer (OpenAI, Anthropic, Gemini, Ollama) | ✅ Done |
-| 4 | Native macOS shell & Accessibility permissions | ⏳ Next |
-| 5 | Screen understanding (Observe deepened) | Planned |
-| 6 | Finder automation | Planned |
-| 7 | Voice system | Planned |
-| 8 | Office automation | Planned |
-| 9 | Gmail automation | Planned |
-| 10 | Study assistant | Planned |
-| 11 | Autonomous workflow engine | Planned |
-| 12 | Performance optimization | Planned |
-| 13 | Production release | Planned |
+| 4 | Final delivery — Finder, screen understanding/OCR/PDF, voice, workflow engine, audit, auto-update, native app + installer | ✅ Done |
+| 5+ | Office, Gmail, Study skills; notarized distribution; performance | Planned |
 
 See [`ROADMAP.md`](ROADMAP.md) and [`PROJECT_STATUS.md`](PROJECT_STATUS.md) for detail.

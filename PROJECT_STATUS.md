@@ -1,19 +1,18 @@
 # Kai — Project Status
 
-_Last updated: Milestone 3._
+_Last updated: 0.4.0 (Final Delivery)._
 
 ## Snapshot
 
-Kai is being built as a **native macOS AI operating system**, organised as a
-modular Swift Package. The platform-agnostic core (architecture, permissions,
-plugins, AI seam + real providers, memory, automation, browser logic) is fully
-built and unit-tested; macOS-only surfaces (SwiftUI UI, AppleScript/NSWorkspace
-bindings, Keychain) are implemented behind `#if os(macOS)` and are completed/run
-on a Mac in Xcode.
+Kai is a modular Swift Package plus a native SwiftUI macOS application. The
+platform-agnostic core, all skill logic, and the AI providers are fully built
+and unit-tested in CI; the SwiftUI shell and OS integrations are complete behind
+`#if os(macOS)` and build into `Kai.app`/`Kai.dmg` on a Mac.
 
-- **Build:** `swift build` clean on Swift 6.2 (strict concurrency).
-- **Tests:** `swift test` — **74 tests, 0 failures**.
+- **Build:** `swift build` and `swift build -c release` — clean, 0 warnings.
+- **Tests:** `swift test` — **104 tests, 0 failures**.
 - **Demo:** `swift run kai-cli` exercises the whole pipeline on any platform.
+- **App:** `make app` / `make dmg` on macOS (see `docs/MACOS_STEPS.md`).
 
 ## Completed milestones
 
@@ -41,6 +40,18 @@ memory (in-memory + JSON); interruptible workflow engine; plugin framework
 - **`HTTPTransport` seam** (URLSession in production, mock in tests) and a
   **`SecretResolver` seam** (environment now; macOS Keychain scaffold). API keys
   are resolved by reference at call time and never persisted.
+
+### 0.4.0 — Final Delivery ✅
+- **KaiFinder**: real, cross-platform file operations — organize-by-type,
+  duplicate detection (SHA-256), search, rename, move, trash + **undo**.
+- **KaiVision**: screen OCR + PDF reading + `DocumentAnalyzer` (read-only,
+  Observe-safe); macOS Vision/PDFKit/ScreenCaptureKit engines.
+- **KaiVoice**: stop-aware `VoiceSession`; macOS Speech/AVFoundation engines.
+- **Workflow engine**: pause/resume/cancel, retry, undo-rollback, dependency
+  ordering. **AuditTrail** (redacted JSONL). **Auto-update** architecture.
+- **Native macOS app**: `KaiAssembly` composition root, full SwiftUI UI
+  (chat/plugins/activity/permissions/settings/approval/voice), live provider
+  switching, installer scripts, app icon.
 
 ## Backward compatibility
 

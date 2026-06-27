@@ -6,6 +6,7 @@ import KaiMemory
 import KaiAutomation
 import KaiPlugins
 import KaiBrowser
+import KaiFinder
 
 // A non-interactive demonstration that wires the platform-agnostic core
 // together and exercises it on any platform (including Linux/CI). It is NOT the
@@ -70,6 +71,7 @@ let browser = InMemoryBrowserController(kind: .safari, pages: [loginPage, inboxP
 let registry = PluginRegistry()
 // Specific skills first, conversation last (it is the catch-all fallback).
 await registry.register(BrowserPlugin(controller: browser, pollInterval: .milliseconds(20)))
+await registry.register(FinderPlugin(controller: LocalFileSystemController()))
 await registry.register(ConversationPlugin())
 
 let services = PluginServices(
@@ -168,10 +170,21 @@ await run("click Compose")    // side effect: blocked in Observe
 await run("execute")
 await run("click Compose")    // now allowed (Yellow, prompter approves)
 
-print("\n[5] Say a stop word:")
+print("\n[5] Finder automation (organize a real temp folder):")
+await appProvider.set(ApplicationContext(bundleIdentifier: KnownApplication.finder, localizedName: "Finder"))
+let finderDir = FileManager.default.temporaryDirectory.appendingPathComponent("kai-demo-\(UUID().uuidString)")
+try? FileManager.default.createDirectory(at: finderDir, withIntermediateDirectories: true)
+for (name, body) in [("photo.png", "img"), ("notes.txt", "same"), ("report.pdf", "pdf"), ("copy.txt", "same")] {
+    try? body.data(using: .utf8)!.write(to: finderDir.appendingPathComponent(name))
+}
+await run("organize \(finderDir.path)")
+await run("find duplicates in \(finderDir.path)")
+try? FileManager.default.removeItem(at: finderDir)
+
+print("\n[6] Say a stop word:")
 await run("stop")
 
-print("\n[6] Return to sleep:")
+print("\n[7] Return to sleep:")
 await stateMachine.stop()
 try? await stateMachine.sleep()
 let finalState = await stateMachine.state
