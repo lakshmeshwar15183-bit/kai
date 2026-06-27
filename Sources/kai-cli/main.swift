@@ -1,6 +1,7 @@
 import Foundation
 import KaiCore
 import KaiAI
+import KaiAIProviders
 import KaiMemory
 import KaiAutomation
 import KaiPlugins
@@ -110,6 +111,24 @@ func run(_ text: String) async {
 // MARK: - Drive the scenario
 
 print("Kai core demo\n=============")
+
+print("\n[0] AI provider independence (offline mock transport):")
+let providerRegistry = AIProviderRegistry()
+// A mock transport returns a canned OpenAI-shaped reply so this runs offline.
+let mockTransport = MockTransport(json: #"{"choices":[{"message":{"role":"assistant","content":"Hello from a swappable provider."}}],"usage":{"prompt_tokens":4,"completion_tokens":6}}"#)
+await ProviderBootstrap.registerDefaults(
+    into: providerRegistry,
+    transport: mockTransport,
+    resolver: StaticSecretResolver(["OPENAI_API_KEY": "demo-key"])
+)
+let availableProviders = await providerRegistry.registeredIDs
+print("  available providers: \(availableProviders.joined(separator: ", "))")
+// Switching vendor is configuration-only — here we select "openai".
+let selected = try await providerRegistry.makeProvider(
+    config: AIProviderConfig(providerID: "openai", model: "gpt-4o")
+)
+let providerReply = try await selected.complete(AIRequest(messages: [.user("Say hello")]))
+print("  [\(selected.id)/\(selected.model)] -> \(providerReply.content)")
 
 print("\n[1] Wake up (typed command):")
 try await stateMachine.activate(trigger: .typedCommand)

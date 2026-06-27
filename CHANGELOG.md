@@ -4,6 +4,34 @@ All notable changes to Kai are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project aims
 to follow Semantic Versioning.
 
+## [0.3.0] — Milestone 3: AI Provider Layer
+
+### Added
+- **`KaiAIProviders` module** (depends only on `KaiAI`) delivering real,
+  swappable AI backends behind the existing `AIProvider`/`AIProviderFactory`
+  seam — switching vendor is configuration-only:
+  - **OpenAI** (Chat Completions), **Anthropic** (Messages, with system
+    hoisting), **Google Gemini** (`generateContent`), and **Ollama** (local,
+    no key) providers, each with a factory.
+  - **`HTTPTransport` seam**: `URLSessionTransport` (dataTask + continuation,
+    identical on macOS/Linux) for production and a request-recording
+    `MockTransport` actor for deterministic tests.
+  - **`SecretResolver` seam**: `EnvironmentSecretResolver` and
+    `StaticSecretResolver`, plus a macOS `KeychainSecretResolver`
+    (`#if os(macOS)`). API keys are resolved by reference at call time and
+    never stored in config or logs.
+  - `AIProviderError` (module-local — the shared `KaiError` was intentionally
+    left untouched) and `ProviderBootstrap.registerDefaults(...)`.
+- 12 new tests (74 total): mock transport, secret resolution, per-provider
+  request shaping + response parsing, HTTP/decoding error mapping, and registry
+  integration proving config-only provider switching.
+- CLI demo section showing provider listing and an offline completion through a
+  selected provider.
+
+### Notes
+- `MockTransport` returns `Data` (Sendable) rather than `[String: Any]` to stay
+  within Swift 6 actor-isolation rules; tests decode bodies locally.
+
 ## [0.2.0] — Milestone 2: Observe/Execute, Active Window Intelligence, Browser
 
 ### Added

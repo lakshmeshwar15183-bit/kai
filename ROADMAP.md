@@ -9,16 +9,23 @@ surfaces are finished in Xcode on a Mac.
 |---|-----------|--------|
 | 1 | **Foundations** — architecture, permissions, plugins, AI seam, memory, automation, UI scaffold | ✅ Done |
 | 2 | **Observe/Execute mode · Active Window Intelligence · Browser automation** | ✅ Done |
-| 3 | **Native macOS shell & Accessibility permissions** — real app target, permission onboarding, status menu, global shortcut, `NSWorkspace` active-app provider | ⏳ Next |
-| 4 | **Screen understanding** — ScreenCaptureKit + Vision; Observe mode reads PDFs (PDFKit), spreadsheets, code, errors, dashboards | Planned |
-| 5 | **Finder automation** — search, rename, organize, move, dedupe, compress, restore, downloads intelligence | Planned |
-| 6 | **Voice system** — Speech (recognition + synthesis), wake word, interruptions, sleep/stop | Planned |
-| 7 | **Office automation** — Excel/Word/PowerPoint/PDF generation, charts, tables, formatting | Planned |
-| 8 | **Gmail automation** — search, label, archive, delete spam/OTP, draft (never send without confirmation) | Planned |
-| 9 | **Study assistant** — organize material, rename PDFs, syllabus tracking, revision notes, flashcards, dashboard | Planned |
-| 10 | **Autonomous workflow engine** — long multi-step flows with pause/resume/cancel/retry/undo | Planned |
-| 11 | **Performance optimization** | Planned |
-| 12 | **Production release** | Planned |
+| 3 | **AI Provider layer** — real OpenAI/Anthropic/Gemini/Ollama behind the seam; HTTP transport + secret resolver | ✅ Done |
+| 4 | **Native macOS shell & Accessibility permissions** — real app target, permission onboarding, status menu, global shortcut, `NSWorkspace` active-app provider | ⏳ Next |
+| 5 | **Screen understanding** — ScreenCaptureKit + Vision; Observe reads PDFs (PDFKit), spreadsheets, code, errors, dashboards | Planned |
+| 6 | **Finder automation** — search, rename, organize, move, dedupe, compress, restore, downloads intelligence | Planned |
+| 7 | **Voice system** — Speech (recognition + synthesis), wake word, interruptions, sleep/stop | Planned |
+| 8 | **Office automation** — Excel/Word/PowerPoint/PDF generation, charts, tables, formatting | Planned |
+| 9 | **Gmail automation** — search, label, archive, delete spam/OTP, draft (never send without confirmation) | Planned |
+| 10 | **Study assistant** — organize material, rename PDFs, syllabus tracking, revision notes, flashcards, dashboard | Planned |
+| 11 | **Autonomous workflow engine** — long multi-step flows with pause/resume/cancel/retry/undo | Planned |
+| 12 | **Performance optimization** | Planned |
+| 13 | **Production release** | Planned |
+
+> **Sequencing note.** The AI Provider layer (3) was brought forward ahead of the
+> macOS shell because it is a first-class requirement that is fully verifiable in
+> CI, whereas the shell is inherently macOS-only. macOS-only milestones are
+> designed with their platform-agnostic substrate built/tested in CI and the
+> AppKit/SwiftUI surface completed on a Mac.
 
 ## Design principles carried through every milestone
 

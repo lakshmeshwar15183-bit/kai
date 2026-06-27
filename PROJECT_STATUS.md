@@ -1,17 +1,18 @@
 # Kai — Project Status
 
-_Last updated: Milestone 2._
+_Last updated: Milestone 3._
 
 ## Snapshot
 
 Kai is being built as a **native macOS AI operating system**, organised as a
 modular Swift Package. The platform-agnostic core (architecture, permissions,
-plugins, AI seam, memory, automation, browser logic) is fully built and
-unit-tested; macOS-only surfaces (SwiftUI UI, AppleScript/NSWorkspace bindings)
-are implemented behind `#if os(macOS)` and are completed/run on a Mac in Xcode.
+plugins, AI seam + real providers, memory, automation, browser logic) is fully
+built and unit-tested; macOS-only surfaces (SwiftUI UI, AppleScript/NSWorkspace
+bindings, Keychain) are implemented behind `#if os(macOS)` and are completed/run
+on a Mac in Xcode.
 
 - **Build:** `swift build` clean on Swift 6.2 (strict concurrency).
-- **Tests:** `swift test` — **62 tests, 0 failures**.
+- **Tests:** `swift test` — **74 tests, 0 failures**.
 - **Demo:** `swift run kai-cli` exercises the whole pipeline on any platform.
 
 ## Completed milestones
@@ -33,22 +34,35 @@ memory (in-memory + JSON); interruptible workflow engine; plugin framework
   pauses for authentication and never enters credentials. In-memory driver for
   tests/CLI; Safari/Chrome/Edge AppleScript driver scaffolded for macOS.
 
+### Milestone 3 — AI Provider Layer ✅
+- **`KaiAIProviders`**: real OpenAI, Anthropic, Gemini, and local Ollama
+  providers behind the existing `AIProvider`/`AIProviderFactory` seam, so
+  switching vendor is configuration-only.
+- **`HTTPTransport` seam** (URLSession in production, mock in tests) and a
+  **`SecretResolver` seam** (environment now; macOS Keychain scaffold). API keys
+  are resolved by reference at call time and never persisted.
+
 ## Backward compatibility
 
-All Milestone 2 additions are additive: `Capability.sideEffect` and
-`Plugin.supportedApplications` are defaulted, and `CommandRouter` gained the
-mode/active-app dependencies as **optional** parameters. No existing call site
-changed.
+Milestone 3 is purely additive — the new `KaiAIProviders` module sits behind the
+existing `AIProvider`/`AIProviderFactory` seam, so no existing call site changed.
+(Milestone 2 additions remain backward compatible too: `Capability.sideEffect`
+and `Plugin.supportedApplications` are defaulted, and `CommandRouter`'s
+mode/active-app dependencies are optional.)
 
 ## In progress / next
 
-Milestone 3 — **Screen Understanding (Observe deepened)** and the macOS shell &
-Accessibility wiring. See `ROADMAP.md`.
+Milestone 4 — **Native macOS shell & Accessibility** (real app target, permission
+onboarding, status menu, global shortcut, `NSWorkspace` active-app provider).
+This is primarily macOS-only work completed on a Mac; its platform-agnostic
+substrate (system-permission model) will be built and tested in CI. See
+`ROADMAP.md`.
 
 ## Platform constraints (CI/sandbox)
 
 The CI/sandbox is Linux without Xcode/AppKit/SwiftUI. Consequently:
-- ✅ Verified here: `KaiCore`, `KaiAI`, `KaiMemory`, `KaiAutomation`,
-  `KaiPlugins`, `KaiBrowser` (logic), CLI.
-- ⚠️ Compiled on macOS only: `KaiApp` (SwiftUI) and the `#if os(macOS)` drivers
-  (`AppleScriptBrowserController`, the forthcoming `NSWorkspace` provider).
+- ✅ Verified here: `KaiCore`, `KaiAI`, `KaiAIProviders`, `KaiMemory`,
+  `KaiAutomation`, `KaiPlugins`, `KaiBrowser` (logic), CLI.
+- ⚠️ Compiled on macOS only: `KaiApp` (SwiftUI) and the `#if os(macOS)` code
+  (`AppleScriptBrowserController`, `KeychainSecretResolver`, the forthcoming
+  `NSWorkspace` active-app provider).

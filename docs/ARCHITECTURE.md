@@ -2,7 +2,7 @@
 
 This document explains the design of Kai's foundation, the reasoning behind each
 decision, and the trade-offs accepted. It is kept current as milestones land
-(latest: Milestone 2 — Observe/Execute, Active Window Intelligence, Browser).
+(latest: Milestone 3 — the AI Provider layer).
 
 ## 1. Goals that shape the architecture
 
@@ -29,7 +29,9 @@ downward dependency graph (no cycles):
               (no dependencies; pure domain)
             ┌──────────────┼──────────────┐
           KaiAI        KaiMemory      KaiAutomation
-            └──────────────┼──────────────┘
+            │
+       KaiAIProviders  (real OpenAI/Anthropic/Gemini/Ollama)
+            └──────────────┼──────────────┐
                        KaiPlugins
                            │
                        KaiBrowser  (skill module)
@@ -45,6 +47,9 @@ downward dependency graph (no cycles):
 - **KaiAI / KaiMemory / KaiAutomation** are independent siblings that depend
   only on KaiCore. They never depend on each other, which keeps them swappable
   and independently testable.
+- **KaiAIProviders** depends only on `KaiAI`. It supplies concrete provider
+  clients behind the `AIProvider`/`AIProviderFactory` seam, so vendors are added
+  or switched without touching any consumer.
 - **KaiPlugins** sits on top and composes the lower layers into the plugin
   contract and command router — the single extensibility seam.
 - **KaiBrowser** is the first *skill module*: a self-contained capability built
@@ -125,6 +130,20 @@ registered factories, so adding OpenAI/Anthropic/Gemini/local means registering
 a factory — call sites never change. API keys are referenced by Keychain name in
 config, never stored inline.
 
+### AI providers (`KaiAIProviders`)
+Concrete clients live in their own module so `KaiAI` stays a pure abstraction.
+Two seams keep them production-grade and testable:
+- **`HTTPTransport`** — providers build a `HTTPRequest` and hand it to a
+  transport. `URLSessionTransport` (dataTask + continuation; behaves the same on
+  macOS and Linux) is production; `MockTransport` records requests and returns
+  canned responses so every provider is unit-tested offline.
+- **`SecretResolver`** — API keys are resolved from a *reference* at call time
+  (`EnvironmentSecretResolver` in CI, `KeychainSecretResolver` on macOS), so
+  credentials never enter config files, the memory store, or logs.
+OpenAI, Anthropic (system hoisting), Gemini (key in query, assistant→model
+role), and Ollama (local, keyless) are implemented, each with a factory.
+`ProviderBootstrap.registerDefaults` wires them into the registry in one call.
+
 ### Memory (`MemoryStore`)
 A protocol with an `InMemoryStore` and an atomic `JSONFileStore`. Both apply the
 privacy guard. Only allowed preferences (folders, browsers, editors, workflows)
@@ -170,7 +189,7 @@ fills secure fields**.
 
 ## 6. Testing
 
-Every platform-agnostic module has an XCTest suite (62 tests as of Milestone 2)
+Every platform-agnostic module has an XCTest suite (74 tests as of Milestone 3)
 covering permission inference/escalation, stop/interruption, state transitions,
 redaction, the event bus, provider registry, memory rejection of secrets,
 workflow completion/interruption/failure, and end-to-end command routing
@@ -178,8 +197,9 @@ including denial of Red actions. `swift test` runs them on Linux/CI.
 
 ## 7. What is intentionally deferred
 
-Real provider clients (OpenAI/Anthropic/Gemini/local), voice, screen
-understanding, and the remaining macOS skills (Finder, Gmail, Office, Study) are
-later milestones. They slot into the existing seams — `AIProviderFactory` for
-vendors and `Plugin`/skill-module for capabilities (as `KaiBrowser` already
-demonstrates) — without changing the core.
+Voice, screen understanding, and the remaining macOS skills (Finder, Gmail,
+Office, Study) are later milestones. They slot into the existing seams —
+`AIProviderFactory` for vendors (already realised by `KaiAIProviders`) and
+`Plugin`/skill-module for capabilities (as `KaiBrowser` demonstrates) — without
+changing the core. Streaming completions (SSE) build on the existing
+`AIProvider.stream` default and the `HTTPTransport` seam.

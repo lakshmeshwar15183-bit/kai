@@ -5,14 +5,16 @@ natural-language instructions and safely performs tasks on your Mac. Kai is not
 a chatbot: it is a modular operating layer that observes, plans, and acts —
 always under your control.
 
-> **Status — Milestone 2 (Observe/Execute · Active Window Intelligence · Browser).**
-> Milestone 1 delivered the modular architecture (activation lifecycle, the
-> three-tier permission model, plugin framework, provider-agnostic AI seam,
-> privacy-first memory, interruptible automation, macOS UI scaffold). Milestone 2
-> adds **Observe/Execute mode**, **Active Window Intelligence**, and the first
-> **skill module — browser automation**. The platform-agnostic core **builds and
-> is unit-tested on Linux/CI** (62 tests); the macOS UI and OS-specific drivers
-> are scaffolded behind `#if os(macOS)` and land fully in later milestones.
+> **Status — Milestone 3 (AI Provider Layer).**
+> Milestone 1 delivered the modular architecture; Milestone 2 added Observe/
+> Execute mode, Active Window Intelligence, and the first skill module (browser
+> automation). Milestone 3 adds **real, swappable AI providers** — OpenAI,
+> Anthropic, Gemini, and local Ollama — behind the existing provider seam, with
+> an HTTP-transport seam and a secret resolver so switching vendor is
+> configuration-only and API keys never touch config or logs. The
+> platform-agnostic core **builds and is unit-tested on Linux/CI** (74 tests);
+> the macOS UI and OS-specific code are scaffolded behind `#if os(macOS)` and
+> land fully in later milestones.
 
 ## Core principles
 
@@ -27,6 +29,8 @@ Sources/
   KaiCore/        Activation + Observe/Execute mode, permission engine, stop
                   controller, event bus, logger, redactor, active-app model
   KaiAI/          Provider-agnostic AI abstraction + registry + echo provider
+  KaiAIProviders/ Real providers: OpenAI, Anthropic, Gemini, Ollama (+ HTTP &
+                  secret-resolver seams)
   KaiMemory/      Privacy-first preference stores (in-memory + JSON file)
   KaiAutomation/  Interruptible multi-step workflow engine
   KaiPlugins/     Plugin protocol, registry, command router, reference plugin
@@ -71,15 +75,16 @@ See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the full design.
 |-----------|-------|--------|
 | 1 | Architecture, plugin framework, permissions, AI seam, memory, automation, UI scaffold | ✅ Done |
 | 2 | Observe/Execute mode, Active Window Intelligence, browser automation | ✅ Done |
-| 3 | Native macOS shell & Accessibility permissions | ⏳ Next |
-| 4 | Screen understanding (Observe deepened) | Planned |
-| 5 | Finder automation | Planned |
-| 6 | Voice system | Planned |
-| 7 | Office automation | Planned |
-| 8 | Gmail automation | Planned |
-| 9 | Study assistant | Planned |
-| 10 | Autonomous workflow engine | Planned |
-| 11 | Performance optimization | Planned |
-| 12 | Production release | Planned |
+| 3 | AI Provider layer (OpenAI, Anthropic, Gemini, Ollama) | ✅ Done |
+| 4 | Native macOS shell & Accessibility permissions | ⏳ Next |
+| 5 | Screen understanding (Observe deepened) | Planned |
+| 6 | Finder automation | Planned |
+| 7 | Voice system | Planned |
+| 8 | Office automation | Planned |
+| 9 | Gmail automation | Planned |
+| 10 | Study assistant | Planned |
+| 11 | Autonomous workflow engine | Planned |
+| 12 | Performance optimization | Planned |
+| 13 | Production release | Planned |
 
 See [`ROADMAP.md`](ROADMAP.md) and [`PROJECT_STATUS.md`](PROJECT_STATUS.md) for detail.
