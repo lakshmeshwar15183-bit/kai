@@ -23,8 +23,12 @@ let package = Package(
         .library(name: "KaiAutomation", targets: ["KaiAutomation"]),
         .library(name: "KaiPlugins", targets: ["KaiPlugins"]),
         .library(name: "KaiBrowser", targets: ["KaiBrowser"]),
+        .library(name: "KaiFinder", targets: ["KaiFinder"]),
+        .library(name: "KaiVision", targets: ["KaiVision"]),
+        .library(name: "KaiVoice", targets: ["KaiVoice"]),
         .library(name: "KaiApp", targets: ["KaiApp"]),
-        .executable(name: "kai-cli", targets: ["kai-cli"])
+        .executable(name: "kai-cli", targets: ["kai-cli"]),
+        .executable(name: "kai-app", targets: ["kai-app"])
     ],
     targets: [
         // MARK: Platform-agnostic libraries
@@ -57,17 +61,40 @@ let package = Package(
             name: "KaiBrowser",
             dependencies: ["KaiCore", "KaiAI", "KaiPlugins"]
         ),
+        .target(
+            name: "KaiFinder",
+            dependencies: ["KaiCore", "KaiPlugins"]
+        ),
+        .target(
+            name: "KaiVision",
+            dependencies: ["KaiCore", "KaiAI", "KaiPlugins"]
+        ),
+        .target(
+            name: "KaiVoice",
+            dependencies: ["KaiCore"]
+        ),
 
         // MARK: macOS-only surface (guarded internally with #if os(macOS))
         .target(
             name: "KaiApp",
-            dependencies: ["KaiCore", "KaiAI", "KaiAIProviders", "KaiMemory", "KaiAutomation", "KaiPlugins", "KaiBrowser"]
+            dependencies: [
+                "KaiCore", "KaiAI", "KaiAIProviders", "KaiMemory", "KaiAutomation",
+                "KaiPlugins", "KaiBrowser", "KaiFinder", "KaiVision", "KaiVoice"
+            ]
         ),
 
-        // MARK: Linux-runnable demo that wires the core together
+        // MARK: Executables
         .executableTarget(
             name: "kai-cli",
-            dependencies: ["KaiCore", "KaiAI", "KaiAIProviders", "KaiMemory", "KaiAutomation", "KaiPlugins", "KaiBrowser"]
+            dependencies: [
+                "KaiCore", "KaiAI", "KaiAIProviders", "KaiMemory", "KaiAutomation",
+                "KaiPlugins", "KaiBrowser", "KaiFinder"
+            ]
+        ),
+        // The launchable macOS application entry point (guarded @main).
+        .executableTarget(
+            name: "kai-app",
+            dependencies: ["KaiApp"]
         ),
 
         // MARK: Tests
@@ -77,6 +104,9 @@ let package = Package(
         .testTarget(name: "KaiMemoryTests", dependencies: ["KaiMemory"]),
         .testTarget(name: "KaiAutomationTests", dependencies: ["KaiAutomation", "KaiCore"]),
         .testTarget(name: "KaiPluginsTests", dependencies: ["KaiPlugins"]),
-        .testTarget(name: "KaiBrowserTests", dependencies: ["KaiBrowser", "KaiPlugins", "KaiAI", "KaiMemory", "KaiCore"])
+        .testTarget(name: "KaiBrowserTests", dependencies: ["KaiBrowser", "KaiPlugins", "KaiAI", "KaiMemory", "KaiCore"]),
+        .testTarget(name: "KaiFinderTests", dependencies: ["KaiFinder", "KaiPlugins", "KaiCore"]),
+        .testTarget(name: "KaiVisionTests", dependencies: ["KaiVision", "KaiPlugins", "KaiCore"]),
+        .testTarget(name: "KaiVoiceTests", dependencies: ["KaiVoice", "KaiCore"])
     ]
 )

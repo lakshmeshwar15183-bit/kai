@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!--
+      Kai is distributed outside the Mac App Store (Developer ID + notarization)
+      because automating other apps and capturing the screen are incompatible
+      with the App Sandbox. The hardened runtime is enabled at codesign time.
+
+      Apple Events automation is gated per-target by the system's Automation
+      permission (TCC); Accessibility and Screen Recording are also TCC-gated.
+      Kai never bypasses these prompts.
+    -->
+    <key>com.apple.security.automation.apple-events</key>
+    <true/>
+    <key>com.apple.security.device.audio-input</key>
+    <true/>
+</dict>
+</plist>

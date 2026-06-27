@@ -4,6 +4,42 @@ All notable changes to Kai are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project aims
 to follow Semantic Versioning.
 
+## [0.4.0] — Final Delivery: Finder, Vision, Voice, Workflows, macOS app
+
+### Added
+- **KaiFinder** skill: real cross-platform file operations — organize-by-type,
+  duplicate detection (dependency-free SHA-256), search, rename, move, and
+  move-to-managed-trash with **one-step undo**. `FinderPlugin` (search/dedupe
+  read-only/Green; mutations Yellow).
+- **KaiVision** skill: `ScreenCapturer`/`OCREngine`/`PDFTextReader` seams, a
+  platform-agnostic `DocumentAnalyzer` (headings + error detection), and a
+  **read-only** `VisionPlugin` (Observe-safe). macOS engines: ScreenCaptureKit,
+  Vision, PDFKit.
+- **KaiVoice** skill: `VoiceSession` coordinator (sleep/wake/listen, stop-aware),
+  speech protocols + stubs; macOS `SFSpeechRecognizer`/`AVSpeechSynthesizer`.
+- **Workflow engine enhancements**: `PausableWorkflowEngine` with pause/resume/
+  cancel, `RetryPolicy`, `UndoableStep` rollback-on-failure, and
+  `DependencyGraph` topological ordering.
+- **AuditTrail**: append-only, redacted JSONL activity log.
+- **Auto-update architecture**: `UpdateChecking` (+ Noop/Static), never silent.
+- **Native macOS app**: `KaiAssembly` composition root wiring every subsystem;
+  full SwiftUI UI (chat, plugins, activity, permission manager, settings with
+  live provider switching, approval sheet, voice); `NSWorkspace` active-app
+  provider; system-permission service; `SwitchableAIProvider`; `UIApprovalPrompter`.
+- **Packaging**: `kai-app` launchable target, `App/Info.plist`, entitlements,
+  `App/AppIcon.svg` + asset catalog, and `Scripts/{build_app,make_dmg,generate_icon}.sh`,
+  a `Makefile`, `INSTALL.md`, `RELEASE_NOTES.md`, and `docs/MACOS_STEPS.md`.
+- 30 new tests (**104 total**) across Finder, automation, audit, update, vision,
+  and voice.
+
+### Changed
+- CLI demo extended with a real Finder section (organize + dedupe).
+
+### Notes
+- Additive only; no breaking changes to existing modules.
+- The SwiftUI shell and OS integrations compile/run on macOS (guarded with
+  `#if os(macOS)`); the cross-platform core is fully tested in CI.
+
 ## [0.3.0] — Milestone 3: AI Provider Layer
 
 ### Added

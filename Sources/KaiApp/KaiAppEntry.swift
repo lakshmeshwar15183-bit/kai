@@ -1,10 +1,26 @@
 #if os(macOS)
 import SwiftUI
+import AppKit
 import KaiCore
 
-/// The SwiftUI application entry point. On a Mac this is launched from an Xcode
-/// app target (or an executable wrapper) by calling `KaiAppEntry.main()`.
+/// Ensures the SwiftPM-built binary behaves as a regular, foreground GUI app
+/// (shows in the Dock, brings its window forward on launch). This matters when
+/// the app is launched as a bundle that was assembled outside Xcode.
+final class KaiAppDelegate: NSObject, NSApplicationDelegate {
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        NSApp.setActivationPolicy(.regular)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        true
+    }
+}
+
+/// The SwiftUI application entry point. Launched on macOS by `kai-app`'s
+/// `KaiAppEntry.main()`.
 public struct KaiAppEntry: App {
+    @NSApplicationDelegateAdaptor(KaiAppDelegate.self) private var delegate
     @StateObject private var model = AppModel()
 
     public init() {}
@@ -13,7 +29,7 @@ public struct KaiAppEntry: App {
         WindowGroup {
             ContentView()
                 .environmentObject(model)
-                .frame(minWidth: 720, minHeight: 480)
+                .frame(minWidth: 820, minHeight: 560)
         }
         .windowStyle(.titleBar)
 
@@ -24,8 +40,8 @@ public struct KaiAppEntry: App {
     }
 }
 
-/// Root layout: a sidebar of sections plus a detail pane, with the status pill
-/// always visible and an approval sheet for guarded actions.
+/// Root layout: a sidebar of sections, a detail pane, an always-visible status
+/// pill, and an approval sheet for guarded actions.
 struct ContentView: View {
     @EnvironmentObject private var model: AppModel
     @State private var section: Section = .chat
@@ -34,17 +50,27 @@ struct ContentView: View {
         case chat = "Chat"
         case plugins = "Plugins"
         case activity = "Activity"
+        case permissions = "Permissions"
         var id: String { rawValue }
+
+        var icon: String {
+            switch self {
+            case .chat: return "bubble.left.and.bubble.right"
+            case .plugins: return "puzzlepiece.extension"
+            case .activity: return "list.bullet.rectangle"
+            case .permissions: return "lock.shield"
+            }
+        }
     }
 
     var body: some View {
         NavigationSplitView {
             List(Section.allCases, selection: $section) { item in
-                Text(item.rawValue).tag(item)
+                Label(item.rawValue, systemImage: item.icon).tag(item)
             }
-            .navigationSplitViewColumnWidth(180)
+            .navigationSplitViewColumnWidth(200)
             .safeAreaInset(edge: .bottom) {
-                StatusIndicatorView(state: model.state)
+                StatusIndicatorView(state: model.state, mode: model.mode, isListening: model.isListening)
                     .padding()
             }
         } detail: {
@@ -52,12 +78,13 @@ struct ContentView: View {
             case .chat: ChatView()
             case .plugins: PluginManagerView()
             case .activity: ActivityLogView()
+            case .permissions: PermissionManagerView()
             }
         }
         .sheet(item: $model.pendingApproval) { approval in
-            ApprovalSheet(approval: approval)
-                .environmentObject(model)
+            ApprovalSheet(approval: approval).environmentObject(model)
         }
+        .onAppear { model.refreshPermissions() }
     }
 }
 #endif

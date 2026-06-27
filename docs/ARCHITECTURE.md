@@ -34,29 +34,30 @@ downward dependency graph (no cycles):
             └──────────────┼──────────────┐
                        KaiPlugins
                            │
-                       KaiBrowser  (skill module)
+        ┌──────────┬───────┴───────┬──────────┐
+   KaiBrowser   KaiFinder      KaiVision    (skill modules)   KaiVoice→KaiCore
+        └──────────┴───────┬───────┴──────────┘
             ┌──────────────┴──────────────┐
-         KaiApp (macOS only)            kai-cli (any platform)
+         KaiApp (macOS only)      kai-cli / kai-app
 ```
 
-- **KaiCore** has no dependencies. It owns the domain primitives every other
-  module relies on: the activation state machine, the **interaction mode
-  controller (Observe/Execute)**, the permission engine, the stop controller,
-  the event bus, the logger, the sensitive-data redactor, and the **active
-  application abstraction**.
-- **KaiAI / KaiMemory / KaiAutomation** are independent siblings that depend
-  only on KaiCore. They never depend on each other, which keeps them swappable
-  and independently testable.
-- **KaiAIProviders** depends only on `KaiAI`. It supplies concrete provider
-  clients behind the `AIProvider`/`AIProviderFactory` seam, so vendors are added
-  or switched without touching any consumer.
-- **KaiPlugins** sits on top and composes the lower layers into the plugin
-  contract and command router — the single extensibility seam.
-- **KaiBrowser** is the first *skill module*: a self-contained capability built
-  on KaiPlugins. Future skills (Finder, Office, Gmail, Study) follow this exact
-  shape — a new module depending on KaiPlugins, never modifying the core.
-- **KaiApp** (SwiftUI) and **kai-cli** (demo/CI) are leaf "drivers" that wire the
-  pieces together. Nothing depends on them.
+- **KaiCore** has no dependencies. It owns the domain primitives: the activation
+  state machine, the **interaction mode controller (Observe/Execute)**, the
+  permission engine, the stop controller, the event bus, the logger, the
+  **audit trail**, the sensitive-data redactor, the **active application
+  abstraction**, and the **update-checker** seam.
+- **KaiAI / KaiMemory / KaiAutomation** are independent siblings depending only
+  on KaiCore. KaiAutomation also provides the pausable engine, retry, undo, and
+  dependency ordering.
+- **KaiAIProviders** depends only on `KaiAI`: concrete provider clients behind
+  the `AIProvider`/`AIProviderFactory` seam.
+- **KaiPlugins** composes the lower layers into the plugin contract and router.
+- **Skill modules** — `KaiBrowser`, `KaiFinder`, `KaiVision` (on KaiPlugins) and
+  `KaiVoice` (on KaiCore) — are self-contained capabilities. They never depend
+  on each other; they communicate through the core/router. New skills follow the
+  same shape without modifying the core.
+- **KaiApp** (SwiftUI) and the **kai-cli / kai-app** executables are leaf
+  drivers. `KaiApp`'s `KaiAssembly` is the single composition root.
 
 **Trade-off:** more modules mean more boilerplate (`Package.swift` targets,
 explicit `public` surfaces) than a single app target. We accept this because the
@@ -189,7 +190,7 @@ fills secure fields**.
 
 ## 6. Testing
 
-Every platform-agnostic module has an XCTest suite (74 tests as of Milestone 3)
+Every platform-agnostic module has an XCTest suite (104 tests as of 0.4.0)
 covering permission inference/escalation, stop/interruption, state transitions,
 redaction, the event bus, provider registry, memory rejection of secrets,
 workflow completion/interruption/failure, and end-to-end command routing

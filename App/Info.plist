@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleName</key>
+    <string>Kai</string>
+    <key>CFBundleDisplayName</key>
+    <string>Kai</string>
+    <key>CFBundleIdentifier</key>
+    <string>com.kai.assistant</string>
+    <key>CFBundleVersion</key>
+    <string>0.4.0</string>
+    <key>CFBundleShortVersionString</key>
+    <string>0.4.0</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleExecutable</key>
+    <string>Kai</string>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
+    <key>LSMinimumSystemVersion</key>
+    <string>14.0</string>
+    <key>LSApplicationCategoryType</key>
+    <string>public.app-category.productivity</string>
+    <key>NSHighResolutionCapable</key>
+    <true/>
+    <key>NSHumanReadableCopyright</key>
+    <string>Kai — Personal AI Operating System for macOS.</string>
+
+    <!-- Usage descriptions for the permissions Kai requests during onboarding. -->
+    <key>NSMicrophoneUsageDescription</key>
+    <string>Kai listens for voice commands only while you have voice activation enabled.</string>
+    <key>NSSpeechRecognitionUsageDescription</key>
+    <string>Kai transcribes your speech to understand voice commands.</string>
+    <key>NSAppleEventsUsageDescription</key>
+    <string>Kai controls Safari and other apps you ask it to operate, under your approval.</string>
+    <key>NSDesktopFolderUsageDescription</key>
+    <string>Kai organizes files in folders you ask it to manage.</string>
+    <key>NSDocumentsFolderUsageDescription</key>
+    <string>Kai organizes and reads documents you ask it to manage.</string>
+    <key>NSDownloadsFolderUsageDescription</key>
+    <string>Kai organizes downloads when you ask it to.</string>
+</dict>
+</plist>
