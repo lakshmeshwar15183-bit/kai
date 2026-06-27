@@ -165,27 +165,72 @@ struct PermissionManagerView: View {
     }
 }
 
-/// Settings: AI provider selection + update check.
+/// Settings: AI provider selection, secure key entry, connection test, + updates.
 struct SettingsView: View {
     @EnvironmentObject private var model: AppModel
-    @State private var providerID = "openai"
-    @State private var modelName = "gpt-4o"
+    @State private var selection: String = ProviderCatalog.all.first?.id ?? "openai"
+    @State private var modelName: String = ProviderCatalog.all.first?.defaultModel ?? "gpt-4o"
+    @State private var apiKey: String = ""
+
+    private var current: ProviderOption { ProviderCatalog.option(selection) ?? ProviderCatalog.all[0] }
 
     var body: some View {
         TabView {
             Form {
-                LabeledContent("Active provider", value: model.selectedProviderID)
-                Picker("Provider", selection: $providerID) {
-                    ForEach(model.providerIDs, id: \.self) { Text($0).tag($0) }
+                Section("Active") {
+                    LabeledContent("Provider in use", value: model.selectedProviderID)
                 }
-                TextField("Model", text: $modelName)
-                HStack {
-                    Button("Apply") { model.selectProvider(id: providerID, model: modelName) }
-                    Button("Use offline (echo)") { model.useOffline() }
+
+                Section("Choose a provider") {
+                    Picker("Provider", selection: $selection) {
+                        ForEach(ProviderCatalog.all) { option in
+                            Text(option.name).tag(option.id)
+                        }
+                    }
+                    .onChange(of: selection) {
+                        modelName = current.defaultModel
+                        apiKey = ""
+                    }
+                    TextField("Model", text: $modelName)
                 }
-                Text("API keys are read from the macOS Keychain and never stored in config or logs.")
-                    .font(.caption).foregroundStyle(.secondary)
+
+                if current.requiresKey {
+                    Section("API key (stored in macOS Keychain)") {
+                        SecureField("Enter \(current.name) API key", text: $apiKey)
+                        HStack {
+                            Button("Save key") { model.saveAPIKey(apiKey, forProvider: current.id); apiKey = "" }
+                                .disabled(apiKey.trimmingCharacters(in: .whitespaces).isEmpty)
+                            if model.hasStoredKey(forProvider: current.id) {
+                                Label("Key stored", systemImage: "checkmark.seal.fill").foregroundStyle(.green)
+                            } else {
+                                Label("No key stored", systemImage: "exclamationmark.triangle").foregroundStyle(.orange)
+                            }
+                        }
+                    }
+                } else {
+                    Section("Local provider") {
+                        Text("Ollama runs locally and needs no API key. Start it with `ollama serve`.")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                }
+
+                Section {
+                    HStack {
+                        Button("Test connection") { model.testConnection(id: current.id, model: modelName) }
+                        Button("Use this provider") { model.applyProvider(id: current.id, model: modelName) }
+                            .buttonStyle(.borderedProminent)
+                            .disabled(current.requiresKey && !model.hasStoredKey(forProvider: current.id))
+                        Spacer()
+                        Button("Use offline (Echo)") { model.useOffline() }
+                    }
+                    if !model.connectionTestResult.isEmpty {
+                        Text(model.connectionTestResult).font(.callout).textSelection(.enabled)
+                    }
+                } footer: {
+                    Text("Keys are read from the Keychain at call time and never written to config or logs.")
+                }
             }
+            .formStyle(.grouped)
             .tabItem { Label("AI", systemImage: "brain") }
 
             Form {
@@ -197,9 +242,10 @@ struct SettingsView: View {
                     Text("Updates are never installed silently.").font(.caption).foregroundStyle(.secondary)
                 }
             }
+            .formStyle(.grouped)
             .tabItem { Label("Updates", systemImage: "arrow.down.circle") }
         }
-        .frame(width: 460, height: 280)
+        .frame(width: 520, height: 440)
         .padding()
     }
 }

@@ -36,6 +36,7 @@ public final class KaiAssembly {
     public let prompter = UIApprovalPrompter()
 
     private let switchableProvider: SwitchableAIProvider
+    private let keychain = KeychainStore()
     public private(set) var router: CommandRouter!
 
     public init() {
@@ -83,6 +84,20 @@ public final class KaiAssembly {
             modeController: modeController,
             activeApplicationProvider: NSWorkspaceActiveApplicationProvider()
         )
+
+        // Restore a previously configured provider (Echo remains the fallback).
+        await restoreConfiguredProvider()
+    }
+
+    /// On launch, switch to the saved provider if its API key is available
+    /// (Ollama needs none). Otherwise stay on the offline echo provider.
+    private func restoreConfiguredProvider() async {
+        guard let id = AppSettings.savedProviderID(),
+              let model = AppSettings.savedModel(),
+              id != "echo" else { return }
+        guard hasKey(forProvider: id) else { return }
+        try? await selectProvider(AIProviderConfig(providerID: id, model: model))
+        await audit.record(category: "settings", "Restored configured provider \(id)/\(model) on launch.")
     }
 
     /// Switches the active AI provider from a configuration (Settings action).
@@ -95,6 +110,41 @@ public final class KaiAssembly {
     /// Reverts to the offline echo provider.
     public func useOfflineProvider() async {
         await switchableProvider.setProvider(EchoAIProvider())
+        AppSettings.clearProvider()
+    }
+
+    // MARK: - API keys & connection testing
+
+    /// Saves an API key for a provider to the Keychain.
+    public func saveAPIKey(_ key: String, forProvider id: String) {
+        guard let account = ProviderCatalog.option(id)?.keychainAccount else { return }
+        try? keychain.set(key, account: account)
+    }
+
+    /// Whether the provider has what it needs to run (key present, or none required).
+    public func hasKey(forProvider id: String) -> Bool {
+        guard let account = ProviderCatalog.option(id)?.keychainAccount else { return true }
+        return keychain.hasValue(account: account)
+    }
+
+    /// Persists the chosen provider so it is restored next launch.
+    public func persistProvider(id: String, model: String) {
+        AppSettings.saveProvider(id: id, model: model)
+    }
+
+    /// Builds the provider and performs a small live request to verify the
+    /// connection and key, without changing the active provider.
+    public func testConnection(_ config: AIProviderConfig) async -> String {
+        do {
+            let provider = try await providerRegistry.makeProvider(config: config)
+            let response = try await provider.complete(
+                AIRequest(messages: [.user("Hello")], options: AIGenerationOptions(maxTokens: 16))
+            )
+            let preview = response.content.trimmingCharacters(in: .whitespacesAndNewlines).prefix(80)
+            return "Connected to \(config.providerID)/\(config.model). Reply: \(preview)"
+        } catch {
+            return "Failed: \(error)"
+        }
     }
 
     // MARK: - Paths

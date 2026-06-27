@@ -23,6 +23,8 @@ public final class AppModel: ObservableObject {
     @Published public var selectedProviderID: String = "echo (offline)"
     @Published public private(set) var isListening = false
     @Published public private(set) var availableUpdate: UpdateInfo?
+    @Published public var connectionTestResult: String = ""
+    @Published private var keyStateVersion = 0
 
     public struct TranscriptEntry: Identifiable, Equatable {
         public let id = UUID()
@@ -43,6 +45,13 @@ public final class AppModel: ObservableObject {
         manifests = await assembly.registry.manifests()
         providerIDs = await assembly.providerRegistry.registeredIDs
         refreshPermissions()
+        // Reflect the active provider chosen on launch (Echo if none configured).
+        if let id = AppSettings.savedProviderID(), let model = AppSettings.savedModel(),
+           assembly.hasKey(forProvider: id) {
+            selectedProviderID = "\(id)/\(model)"
+        } else {
+            selectedProviderID = "echo (offline)"
+        }
 
         // Event stream → UI.
         let events = await assembly.eventBus.subscribe()
@@ -120,13 +129,15 @@ public final class AppModel: ObservableObject {
         assembly.permissions.openSettings(for: permission)
     }
 
-    public func selectProvider(id: String, model: String) {
+    public func applyProvider(id: String, model: String) {
         Task {
             do {
                 try await assembly.selectProvider(AIProviderConfig(providerID: id, model: model))
+                assembly.persistProvider(id: id, model: model)
                 selectedProviderID = "\(id)/\(model)"
+                connectionTestResult = "Active provider set to \(id)/\(model)."
             } catch {
-                append("provider switch failed: \(error)")
+                connectionTestResult = "Failed to set provider: \(error)"
             }
         }
     }
@@ -134,6 +145,31 @@ public final class AppModel: ObservableObject {
     public func useOffline() {
         Task { await assembly.useOfflineProvider() }
         selectedProviderID = "echo (offline)"
+        connectionTestResult = "Using offline echo provider."
+    }
+
+    /// Stores an API key for a provider in the Keychain.
+    public func saveAPIKey(_ key: String, forProvider id: String) {
+        let trimmed = key.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        assembly.saveAPIKey(trimmed, forProvider: id)
+        keyStateVersion += 1
+        connectionTestResult = "Saved API key for \(id) to Keychain."
+    }
+
+    /// Whether a usable credential exists for the provider (Ollama needs none).
+    public func hasStoredKey(forProvider id: String) -> Bool {
+        _ = keyStateVersion // re-evaluate when keys change
+        return assembly.hasKey(forProvider: id)
+    }
+
+    /// Performs a live request to verify the provider/key without switching to it.
+    public func testConnection(id: String, model: String) {
+        connectionTestResult = "Testing \(id)/\(model)…"
+        Task {
+            let result = await assembly.testConnection(AIProviderConfig(providerID: id, model: model))
+            connectionTestResult = result
+        }
     }
 
     public func checkForUpdates() {
