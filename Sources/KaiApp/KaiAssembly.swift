@@ -11,27 +11,6 @@ import KaiFinder
 import KaiVision
 import KaiVoice
 
-/// An `AIProvider` whose backing provider can be swapped at runtime, so the
-/// Settings screen can change vendor without rebuilding the command pipeline.
-public final class SwitchableAIProvider: AIProvider, @unchecked Sendable {
-    private let lock = NSLock()
-    private var backing: any AIProvider
-
-    public init(_ initial: any AIProvider) { self.backing = initial }
-
-    public func setProvider(_ provider: any AIProvider) {
-        lock.lock(); backing = provider; lock.unlock()
-    }
-
-    public var id: String { lock.lock(); defer { lock.unlock() }; return backing.id }
-    public var model: String { lock.lock(); defer { lock.unlock() }; return backing.model }
-
-    public func complete(_ request: AIRequest) async throws -> AIResponse {
-        lock.lock(); let provider = backing; lock.unlock()
-        return try await provider.complete(request)
-    }
-}
-
 /// The composition root. Builds and wires every Kai subsystem for the macOS app:
 /// core lifecycle, audit, AI providers, memory, all skill plugins, the router
 /// (with Observe/Execute mode + Active Window Intelligence), and voice.
@@ -109,13 +88,13 @@ public final class KaiAssembly {
     /// Switches the active AI provider from a configuration (Settings action).
     public func selectProvider(_ config: AIProviderConfig) async throws {
         let provider = try await providerRegistry.makeProvider(config: config)
-        switchableProvider.setProvider(provider)
+        await switchableProvider.setProvider(provider)
         await audit.record(category: "settings", "AI provider switched to \(config.providerID)/\(config.model).")
     }
 
     /// Reverts to the offline echo provider.
-    public func useOfflineProvider() {
-        switchableProvider.setProvider(EchoAIProvider())
+    public func useOfflineProvider() async {
+        await switchableProvider.setProvider(EchoAIProvider())
     }
 
     // MARK: - Paths

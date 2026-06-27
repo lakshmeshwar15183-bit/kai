@@ -6,6 +6,7 @@ import KaiCore
 /// Ensures the SwiftPM-built binary behaves as a regular, foreground GUI app
 /// (shows in the Dock, brings its window forward on launch). This matters when
 /// the app is launched as a bundle that was assembled outside Xcode.
+@MainActor
 final class KaiAppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.regular)

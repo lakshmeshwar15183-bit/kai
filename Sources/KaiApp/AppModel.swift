@@ -132,7 +132,7 @@ public final class AppModel: ObservableObject {
     }
 
     public func useOffline() {
-        assembly.useOfflineProvider()
+        Task { await assembly.useOfflineProvider() }
         selectedProviderID = "echo (offline)"
     }
 

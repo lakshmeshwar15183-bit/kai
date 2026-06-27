@@ -8,10 +8,10 @@ import CoreGraphics
 
 /// macOS OCR via the Vision framework.
 public struct VisionOCREngine: OCREngine {
-    private let recognitionLevel: VNRequestTextRecognitionLevel
+    private let accurate: Bool
 
     public init(accurate: Bool = true) {
-        self.recognitionLevel = accurate ? .accurate : .fast
+        self.accurate = accurate
     }
 
     public func recognizeText(in imageData: Data) async throws -> RecognizedText {
@@ -19,6 +19,7 @@ public struct VisionOCREngine: OCREngine {
               let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
             throw VisionError.recognitionFailed(reason: "invalid image data")
         }
+        let level: VNRequestTextRecognitionLevel = accurate ? .accurate : .fast
 
         return try await withCheckedThrowingContinuation { continuation in
             let request = VNRecognizeTextRequest { request, error in
@@ -37,7 +38,7 @@ public struct VisionOCREngine: OCREngine {
                 }
                 continuation.resume(returning: RecognizedText(lines: lines))
             }
-            request.recognitionLevel = recognitionLevel
+            request.recognitionLevel = level
             request.usesLanguageCorrection = true
             let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
             do { try handler.perform([request]) }

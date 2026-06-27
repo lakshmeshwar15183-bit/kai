@@ -2,17 +2,20 @@
 import Foundation
 import Speech
 import AVFoundation
+import os
 
 /// Guards a continuation so it is resumed at most once, even if the speech
-/// callback fires multiple times on an arbitrary queue (Swift 6 concurrency-safe).
-private final class ResumeOnce: @unchecked Sendable {
-    private let lock = NSLock()
-    private var done = false
+/// callback fires multiple times on an arbitrary queue. Uses
+/// `OSAllocatedUnfairLock` (a Swift-concurrency-safe primitive) rather than a
+/// raw `NSLock`, and never holds the lock across an `await`.
+private final class ResumeOnce: Sendable {
+    private let state = OSAllocatedUnfairLock(initialState: false)
     func claim() -> Bool {
-        lock.lock(); defer { lock.unlock() }
-        if done { return false }
-        done = true
-        return true
+        state.withLock { claimed in
+            if claimed { return false }
+            claimed = true
+            return true
+        }
     }
 }
 
